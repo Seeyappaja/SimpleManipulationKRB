@@ -23,9 +23,9 @@ def is_kerberos(raw_data): # Function which tests if this message is a keberos A
         return False, 0  # Usually not a Kerberos message
 
     if raw_data[4] == 107 and raw_data[5] == 130: # Yes i have to do it this way since the interpretation of bytes is messed up copared to capturing raw message
-        return True, 1  # AS-REP
+        return True, 1  # AS_REP
     elif raw_data[4] == 126:
-        return True, 2  # KERB_ERROR
+        return True, 2  # KRB_ERROR
     else:
         return False, 0 
 
@@ -190,7 +190,7 @@ for payload in payloads:
         is_krb, msg_type = is_kerberos(server_raw_data)
         if is_krb:
             if msg_type == 1: # This means this user has preauth disabled
-                print(f"KDC responded with AS-REQ for {payload}")
+                print(f"KDC responded with AS-REQ for {payload}. This user exists and doesn't require authentication")
             if msg_type == 2:
                 record_lenght = get_record_lenght(server_raw_data[:4])
                 pvno_offset = 4 + 4 + 4 + 1
@@ -204,11 +204,13 @@ for payload in payloads:
                 error_code = server_raw_data[error_code_offset]
                 error_code_msg = krb_error_codes.get(server_raw_data[error_code_offset], "Unknown")
                 if error_code == 6: # This means user doesnt exist in AD database
-                    print(f"KDC responded with {error_code_msg} for user {payload}")
+                    print(f"KDC responded with {error_code_msg} for user {payload}. This doesn't user exists")
                 elif error_code == 25: # User exists but requires preauthentication
-                    print(f"KDC responded with {error_code_msg} for user {payload}")
+                    print(f"KDC responded with {error_code_msg} for user {payload}. This user exists and requires pre-authentication")
+                elif error_code == 18: # User exists but was disabled due to whatever the organization decided
+                    print(f"KDC responded with {error_code_msg} for user {payload}. This user exists but has been disabled")
                 else: # Any other case user doesnt exist
-                    print(f"KDC responded with {error_code_msg} for user {payload}")
+                    print(f"KDC responded with {error_code_msg}. This response is unusual")
     else:
         print("Received unknown response")
     
